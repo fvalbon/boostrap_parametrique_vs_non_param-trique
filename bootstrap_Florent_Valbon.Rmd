@@ -1,0 +1,1056 @@
+---
+title: "Bootstrap paramétrique et bootstrap non paramétrique"
+runtime: shiny
+output: html_document
+author : Florent Valbon
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+Soit $n$ un entier naturel strictement positif. Nous disposons d'un nombre limité de données générées par une loi Gamma de paramètres $k$ entier naturel non nul et $\theta$ réel strictement positif (nous pouvons aussi parler de loi d' Erlang dans ce cas particulier où $k$ est un entier naturel) : $\Gamma(k,\theta)$.  On suppose $k$ connu. On note $F_{k,\theta}$ la fonction de répartition de cette loi. Nous pouvons modifier la valeur de $k$, ainsi que le nombre $n$ de données observées : 
+```{r}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    textOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderText({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+aircond
+})
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+Formellement, soient 
+\[X_1, ... , X_n \overset{i.i.d.}{\sim} \Gamma(k,\theta)\]
+$n$ variables aléatoires associées à ces réalisations.
+On s'intéresse à l'estimation de $\theta$. Posons 
+\[\bar{X_n}:=\frac{1}{n}\sum_{i=0}^nX_i.\]
+Comme 
+\[E[X_1]=\frac{k}{\theta},\]
+alors, par la méthode des moments, on obtient un estimateur de $\theta$ :
+
+\[T := \frac{k}{\bar X_n}.\]
+
+
+Soit $x = (x_1, \cdots ,x_n)$ une réalisation de $(X_1, \cdots, X_n)$. Supposons tout naturellement les observations $x_i$ toutes deux à deux différentes (puisque la loi Gamma est une loi à densité).
+
+Posons également $t:=T(x)$. 
+
+Nous manquons de données. Nous allons donc générer $B$ échantillons (dit bootstrap) de deux façons :
+
+Premièrement, en simulant selon la loi estimée $F_t$ ayant généré ces données : c'est à dire que nous allons simuler $B$ échantillons bootstrap 
+\[x^{*1} = (x_1^{*1} \cdots x_n^{*1}),\cdots ,x^{*B} = (x_1^{*B} \cdots x_n^{*B})\] chacun selon la loi $F_{t}$. 
+On appelle cela faire un bootstrap paramétrique.
+
+Deuxièmement, si on est plus sceptique quant à la loi ayant généré ces données (bien sûr nous savons que ces données-ci sont simulés selon une loi Gamma, mais faisons comme si nous n'en étions pas sûr! ), en simulant suivant la loi empirique des données $\hat{F}_{n}$ : cela  revient à  tirer avec remise un point $x_i$ au hasard dans l'échantillon $x_1, \cdots x_n$ (nous admettrons ce point dans ce projet). On obtient $B$ échantillons bootstrap \[x^{**1} = (x_1^{**1} \cdots x_n^{**1}), \cdots ,x^{**B} = (x_1^{**B} \cdots x_n^{**B}).\] 
+On appelle cela faire un bootstap non  paramétrique.
+
+L'objectif de ce projet est de comparer le bootstrap paramétrique au bootstrap non paramétrique. Les deux méthodes se valent elles? Quelle est la plus précise? On pourra également modifier le nombre $B$ d'échantillons bootstrap simulés. 
+
+
+# Comparaison des deux types d'échantillons 
+Considérons que nous disposons d'un nombre de données "raisonnables" (environs 12) et que nous suspectons qu'elles "proviennent" d'une loi Gamma, mais que nous n'en sommes pas sûr.
+
+## Fonctions de répartition empiriques
+
+Nous avons bien des raisons de penser que les deux types échantillons bootstrap sont générés suivant approximativement la même loi. En effet, à $b$ fixé, les fonctions de répartition empiriques 
+
+\[F_{t,b}(x) = \sum_{i=1}^n\frac{1_{x_i^{*b} \le x}}{n}\]
+
+et
+
+\[\hat {F}_{n,b}(x) = \sum_{i=1}^n\frac{1_{x_i^{**b} \le x}}{n}\]
+
+sont très similaires.
+
+Cela signifie que les échantillons bootstrap paramétriques et non paramétriques sont générés suivant à peu près la même loi. 
+On remarque que si on augmente le nombres $n$ de données observées, les lois des échantillons sont encore plus proches que celles d'une loi $\Gamma(k,\theta)$. Cela est normal, puisque observer plus de données nous permet de mieux connaitre la loi qui a généré ces dernières, et que ces dernières proviennent en fait réellement d'une loi Gamma (ce qui explique la très grande efficacité du bootstrap paramétrique dans ce cas).
+
+```{r eruption3, echo=FALSE}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    plotOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderPlot({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+par(mfrow = c(1,2))
+
+obs1.boot <- sample(aircond, replace=TRUE)
+obs2.boot <- sample(aircond, replace=TRUE)
+obs3.boot <- sample(aircond, replace=TRUE)
+plot(ecdf(obs1.boot), xlim=c(0, max(aircond)), col=4, main='Echantillons bootstrap non paramétrique')
+plot(ecdf(obs2.boot), add=TRUE, col=5)
+plot(ecdf(obs3.boot), add=TRUE, col=6)
+plot(ecdf(aircond), add=TRUE, col=1)
+legend(300, .6, lty=1, legend='données')
+
+t <- input$k/mean(aircond)
+
+obs1.boot <- rgamma(input$n, shape = input$k, t)
+obs2.boot <- rgamma(input$n, shape = input$k, t)
+obs3.boot <- rgamma(input$n, shape = input$k, t)
+plot(ecdf(obs1.boot), xlim=c(0, max(aircond)), col=4, main='Echantillons bootstrap paramétrique')
+plot(ecdf(obs2.boot), add=TRUE, col=5)
+plot(ecdf(obs3.boot), add=TRUE, col=6)
+plot(ecdf(aircond), add=TRUE, col=1)
+curve(pgamma(x,shape = input$k,t), add=TRUE,col=5)
+legend(300, .6, lty=1, legend='données')
+})
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+```
+
+
+# Comparaisons des répliques bootstrap de l'estimateur
+Mais qu'en est-t-il des nouveaux estimateurs de $\theta$ obtenus avec les deux méthodes?
+Selon le type d'échantillon bootstrap utilisé, on obtient $B$ répliques bootstraps \[T(x^{*b})=\frac{k}{\bar {x^{*b}}}= \frac{kn}{\sum_{i=0}^nx_i^{*b}}\] et \[T(x^{**b}) = \frac{k}{\bar {x^{**b}}}= \frac{kn}{\sum_{i=0}^nx_i^{**b}}\] de l'estimateur $T$. Nous allons comparer la loi des deux types de répliques. 
+
+Dans toute cette partie nous allons pour les commentaires considérer un nombre "raisonnable" de données et d'échantillons bootstrap générés ($25\le B$).
+
+Bien sûr, si nous diminuons le nombre de répliques bootstrap, nous ne pourrons rien déduire quant à ces deux types de répliques. D'autre part, l'estimation d'un éventuel biais (ou même risque etc.) de $T$ sera moins bonne. Même si la loi par rapport à laquelle nous aurons simulé les échantillons bootstrap sera un bon estimateur de $F_{k,\theta}$, nous n'aurons pas assez de répliques de $T$.  Si le nombre de données est trop faible, c'est en revanche la loi selon laquelle on aura simulé chaque échantillon bootstrap qui ne sera pas un bon estimateur.
+
+## Histogrammes 
+
+
+Dans les deux cas (paramétrique et non paramétrique), la loi des répliques bootstrap est unimodale et possède une certaine asymétrie. 
+
+```{r eruption5, echo=FALSE}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    plotOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderPlot({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+
+par(mfrow=c(1, 2))
+hist(estim.np, freq=FALSE, main='Bootstrap non paramétrique', xlab='répliques bootstrap', col ="green")
+hist(estim.gamma, freq=FALSE, main='Bootstrap paramétrique', xlab='répliques bootstrap', col ="blue")
+  })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+
+## Boxplots
+
+Les boxplots sont eux aussi quasiment les mêmes (mêmes médianes, présence de valeurs aberrantes aux mêmes endroits etc.). On observe également une asymétrie. Au vu de l'allure des boxplots, il est probable que les deux lois soient les mêmes à une transformation affine près.
+```{r eruption6, echo=FALSE}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    plotOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderPlot({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+par(mfrow = c(1,2))
+boxplot(estim.np, main = "Bootstrap non paramétrique", col="green")
+boxplot(estim.gamma, main = "Bootstrap paramétrique", col="blue")
+  })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+
+Il n'y a donc pas une grande différence entre la loi des répliques bootstrap  $T(x^{*b})$ et celle des répliques $T(x^{**b})$. Le QQ-plot confirme cela et nous donne plus de précision quant à cette différence. 
+
+```{r eruption7, echo=FALSE}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    plotOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderPlot({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+qqplot(estim.np, estim.gamma, xlab='répliques non paramétriques', ylab='répliques paramétriques', main='QQ-plot', col ="green")
+abline(0, 1)
+  })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+Elles sont en fait les mêmes à une transformation affine près, car les points du QQ-plot des données centrées-réduites s'alignent bien sur la première bissectrice.
+
+```{r eruption8, echo=FALSE}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    plotOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderPlot({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+centreduit <- function(vec)
+  return((vec-mean(vec))/sd(vec))
+
+qqplot(centreduit(estim.np), centreduit(estim.gamma), xlab='répliques non paramétriques', ylab='répliques paramétriques', main='QQ-plot', col="blue")
+abline(0, 1)
+ })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+## Fonctions de répartition empiriques
+
+
+Cela est encore confirmé par le fait que les fonctions de répartition empirique soient proches.
+
+
+```{r eruption9, echo=FALSE}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillon bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    plotOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderPlot({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+centreduit <- function(vec)
+  return((vec-mean(vec))/sd(vec))
+
+plot(ecdf(estim.np), col='green', main="Répliques bootstrap")
+plot(ecdf(estim.gamma), col='blue', add=TRUE)
+legend(.015, .5, legend=c("Bootstrap non paramétrique", "Bootstrap paramétrique"), col=c('green', 'blue'), lty=1)
+ })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+## Test de Kolmogorov
+
+Les données centrées réduites s'écrivent :
+
+\[\frac{T(x_b^*)-\bar{x_B^{*}}}{\sigma_B^{*}}\]
+
+et 
+
+\[\frac{T(x_b^{**})-\bar{x_B^{**}}}{\sigma_B^{**}}\]
+
+Où $\sigma_B^{*}$ et $\bar{x_B^{*}}$ sont respectivement les variances et moyennes empiriques associées aux répliques bootstrap $T_b^*$.
+
+Effectuons enfin un test de Kolmogorov-Smirnov sur les données centrées réduites pour confirmer nos remarques. Autrement dit testons l'hypothèses :
+  \[H_0 = "\text{Les } \frac{T(x_b^*)-\bar{x_B^{*}}}{\sigma_B^{*}} \text{ et les } \frac{T(x_b^{**})-\bar{x_B^{**}}}{\sigma_B^{**}}, 1\le b \le B \text{ sont distribués selon la même loi.}"\]
+contre l'hypothèse 
+\[H_1 = "\text{Les } \frac{T(x_b^*)-\bar{x_B^{*}}}{\sigma_B^{*}} \text{ et les } \frac{T(x_b^{**})-\bar{x_B^{**}}}{\sigma_B^{**}}, 1\le b \le B \text{ ne sont pas distribués selon la même loi.}"\]
+
+La p-value est élevée, on accepte donc l'hypothèse $H_0$ à tous les niveaux de test usuels. Cela renforce l'hypothèse précédente.
+
+```{r}
+n =12
+k = 10
+R = 1000
+aircond <- rgamma(n,shape = k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+centreduit <- function(vec)
+  return((vec-mean(vec))/sd(vec))
+
+
+#ks test : il  A adapter!!
+
+ks.test(x = centreduit(estim.np) , y = centreduit(estim.gamma))
+#Two-sample Kolmogorov-Smirnov test
+#data: X and Y
+#D = 0.52, p-value = 1.581e-06
+#alternative hypothesis: two-sided
+```
+
+
+# Estimation et comparaison des estimations du risque
+
+Afin d'évaluer l'efficacité des deux bootstrap, nous pouvons par exemple calculer le risque de $T$.
+
+Une estimation du risque à l'aide des répliques bootstrap paramétriques est par décomposition biais-variance :
+
+ \[\left(t-\sum_{b=1}^{B}\frac{T(x^{*b})}{B}\right)^2+\sigma_B^{*}=k^2n^2\left(\frac{1}{\sum_{i=0}^nx_i}-\frac{1}{B}\sum_{b=1}^{B}\frac{1}{\sum_{i=0}^nx_i^{*b}}\right)^2+\sigma_B^{*}.\]
+
+On obtient par application numérique :
+```{r}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    textOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderText({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+t <- k/mean(aircond)
+(t-mean(estim.gamma))^2+var(estim.gamma)
+})
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+Une estimation du risque à l'aide des répliques bootstrap non paramétriques est de même :
+  
+  \[\left(t-\sum_{b=1}^{B}\frac{T(x^{**b})}{B}\right)^2+\sigma_B^{**}=k^2n^2\left(\frac{1}{\sum_{i=0}^nx_i}-\frac{1}{B}\sum_{b=1}^{B}\frac{1}{\sum_{i=0}^nx_i^{**b}}\right)^2+\sigma_B^{**}.\]
+
+On obtient par application numérique :
+```{r}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de donées :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    textOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderText({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+t <- k/mean(aircond)
+(t-mean(estim.np))^2+var(estim.np)
+ })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+```
+
+Les deux résultats sont très proches (rapport très proche de 1). Cela renforce l'hypothèse précédente.
+
+```{r}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    textOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderText({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+t <- k/mean(aircond)
+((t-mean(estim.gamma))^2+var(estim.gamma))/((t-mean(estim.np))^2+var(estim.np))
+
+
+ })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+```
+
+## Quelles répliques fournissent la meilleur estimation?
+
+Le risque de $T$ vaut en revanche :
+```{r}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    textOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderText({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+t <- k/mean(aircond)
+theta <- k/mean(aircond)
+T <- estim.T(theta, n, 100000)
+((t-mean(T))^2+var(T))
+
+
+ })
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+```
+Le risque obtenu avec les répliques bootstrap paramétrique est plus proche de ce dernier. 
+
+Comparons le QQ-plot des quantiles des lois des répliques bootstrap avec ceux de la loi de T :
+  
+```{r eruption11, echo=FALSE}
+ui<- pageWithSidebar(
+  
+  headerPanel(""), # titre de l'appli
+  
+  sidebarPanel(
+    
+   
+    
+    sliderInput("n", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre de données :", 
+                value = 12, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 500), # le nombre maximum d'observations possible est 1000
+    
+      sliderInput("B", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Nombre d'échantillons bootstrap :", 
+                value = 1000, # la valeur par défaut est de 500 observations
+                min = 1, # le nombre minimum d'observations possible est 100
+                max = 10000), # le nombre maximum d'observations possible est 1000
+    
+    numericInput("k", # on va pouvoir spécifier ici le nombre d'observations qui seront générées pour construire l'histogramme
+                "Valeur de k :", 
+                value = 10, # la valeur par défaut est de 500 observations
+                ) # le nombre maximum d'observations possible est 1000
+    
+  ),
+  
+  mainPanel(
+    
+    h3(""), 
+    
+    plotOutput("mon_histo") # cette fois on aura une sortie de type 'plot' et non 'text'
+    
+  )
+  
+)
+library(shiny)
+
+server<- function(input, output) { 
+  
+  output$mon_histo <- renderPlot({ # on fait appel à la fonction 'renderPlot' cette fois car notre sortie sera un graphique
+    
+    
+    set.seed(123) # ce paramètre sert à fixer une graine pour l'aléatoire lors de la génération de x (non indispensable)
+R = input$B
+k = input$k
+n = input$n
+aircond <- rgamma(input$n,shape = input$k, 0.01)
+boot.np <- function(obs, R){
+  return(replicate(R, k/(mean(sample(obs, replace=TRUE)))))
+}
+
+boot.gamma <- function(obs, R){
+  t <- k/mean(obs)
+  return(replicate(R, k/(mean(rgamma(n, shape = k,  t)))))
+}
+
+estim.T <- function(theta, n, R){
+  return(replicate(R, k/(mean(rgamma(n, shape = k, theta)))))
+}
+
+
+estim.np <- boot.np(aircond, R)
+estim.gamma <- boot.gamma(aircond, R)
+
+theta <- k/mean(aircond)
+T <- estim.T(theta, n, 100000)
+par(mfrow=c(1, 2))
+qqplot(T, estim.np, ylab='répliques non  paramétriques', main='Bootstrap non paramétrique', col = "green")
+abline(0,1)
+qqplot(T, estim.gamma, ylab='répliques paramétriques', main='Bootstrap paramétrique', col = "blue")
+abline(0,1)
+})
+ 
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+```
+
+Si les deux répliques bootstrap ont une loi très proche de celle de $T$ (car les points sont proches de la première bissectrice), les répliques bootstrap paramétriques fournissent une approximation meilleure. Cela était attendu, car une bonne approximation de $T$ permet de "mieux connaitre" la loi $F_{k,\theta}$ qui a généré les données à notre disposition. Ceci dit, même si c'est le cas ici, trouver un bon estimateur n'est pas toujours facile.
+
+
